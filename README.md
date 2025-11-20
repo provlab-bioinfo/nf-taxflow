@@ -6,7 +6,7 @@
 **nf-taxflow** is a bioinformatics pipeline designed for accurate taxonomic classification of pathogenic microorganisms from high-throughput sequencing reads or assembled contigs. Built with Nextflow,it enables portable and scalable execution across a range of computing environments. The use of Docker and Singularity containers ensures easy installation and highly reproducible results.
 
 ## Pipeline Summary
-The pipeline takes a samplesheet and corresponding quality controlled FASTQ/FASTA files as input. It classified sequence reads with kraken2/bracken, sylph/sylphtax, and singleM with "--datatype reads" option enabled. It can also classify assembled contigs with "gtdbtk ani_rep" with "--datatype genomes" enabled.
+The pipeline takes a samplesheet and corresponding quality controlled FASTQ/FASTA files as input. It classified sequence reads with kraken2/bracken, sylph/sylphtax, and singleM. It can also classify assembled contigs with "gtdbtk ani_rep" 
 
 ## Pipeline required reference sequences and databases
 1. [Kraken 2 / Bracken Database](https://benlangmead.github.io/aws-indexes/k2)
@@ -27,24 +27,14 @@ You can clone or download the nf-taxflow from github to local computer or you ca
 nextflow run xiaoli-dong/nf-taxflow -r revision_number(e.g:1000908) --help
 ```
 ### Prepare required samplesheet input
-The nf-taxflow pipeline requires user to provide a csv format samplesheet, which contains the sequenence information for each of your samples, as input. The samplesheet can contain only sequence reads or only assembled contigs/genomes, it cannot not accept data from both quality controlled sequence reads or assembled contigs in one analysis. See below for what the samplesheet looks like:
+The nf-taxflow pipeline requires user to provide a csv format samplesheet, which contains the sequenence information for each of your samples, as input.  See below for what the samplesheet looks like:
 
 `samplesheet.csv` for Illumina or nanopore reads analysis example
 ```
-sample,fastq_1,fastq_2
-S1,./raw/1_S1_L001_R1_001.fastq.gz,./raw/1_S1_L001_R2_001.fastq.gz
-S10,./raw/10_S10_L001_R1_001.fastq.gz,./raw/10_S10_L001_R2_001.fastq.gz
-S20,./raw/20_S20_L001_R1_001.fastq.gz,./raw/20_S20_L001_R2_001.fastq.gz
-S30,./raw/30_S30_L001_R1_001.fastq.gz,./raw/30_S30_L001_R2_001.fastq.gz
-bact,./raw/24_S24_L001_R1_001.fastq.gz,./raw/24_S24_L001_R2_001.fastq.gz
-barcode56,./raw/barcode56.fastq.gz,
-barcode14,./raw/barcode14.fastq.gz,
-```
+sample,fastq_1,fastq_2,long_fastq,fasta_contig
+25PS-154M00027,./inputdata/25PS-154M00027.deacon_1.fastq.gz,./inputdata/25PS-154M00027.deacon_2.fastq.gz,./inputdata/25PS-154M00027.deacon.fastq.gz,./inputdata/25PS-154M00027.contigs_final.fasta
+25PS-157M00046,./inputdata/25PS-157M00046.deacon_1.fastq.gz,./inputdata/25PS-157M00046.deacon_2.fastq.gz,./inputdata/25PS-157M00046.deacon.fastq.gz,./inputdata/25PS-157M00046.contigs_final.fasta
 
-`samplesheet.csv` for assembled contigs/genomes data analysis
-```
-sample,fastq_1,fastq_2
-assembly1,./raw/sample1_gas.contigs.fa.gz,
 ```
 
 ### Run the pipeline:
@@ -58,8 +48,7 @@ Now, you can run the pipeline using:
 nextflow run nf-taxflow/main.nf \
   -profile singularity \
   --input samplesheet.csv \
-  --datatype reads \
-  --platforom illumina \
+  --datatype short \
   --outdir results \
   -resume
 
@@ -67,7 +56,15 @@ nextflow run nf-taxflow/main.nf \
 nextflow run nf-taxflow/main.nf \
   -profile singularity \
   --input samplesheet.csv \
-  --datatype genomes \
+  --datatype contig \
+  --outdir results \
+  -resume
+
+# Example command to run the pipeline from local download for all of the datatype of the sample: short|long|contig
+nextflow run nf-taxflow/main.nf \
+  -profile singularity \
+  --input samplesheet.csv \
+  --datatype all \
   --outdir results \
   -resume
 ```
