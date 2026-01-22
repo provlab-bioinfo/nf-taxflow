@@ -32,8 +32,8 @@ The nf-taxflow pipeline requires user to provide a csv format samplesheet, which
 `samplesheet.csv` for Illumina or nanopore reads analysis example
 ```
 sample,fastq_1,fastq_2,long_fastq,fasta_contig
-25PS-154M00027,./inputdata/25PS-154M00027.deacon_1.fastq.gz,./inputdata/25PS-154M00027.deacon_2.fastq.gz,./inputdata/25PS-154M00027.deacon.fastq.gz,./inputdata/25PS-154M00027.contigs_final.fasta
-25PS-157M00046,./inputdata/25PS-157M00046.deacon_1.fastq.gz,./inputdata/25PS-157M00046.deacon_2.fastq.gz,./inputdata/25PS-157M00046.deacon.fastq.gz,./inputdata/25PS-157M00046.contigs_final.fasta
+sample1,./inputdata/sample1.deacon_1.fastq.gz,./inputdata/sample1.deacon_2.fastq.gz,./inputdata/sample1.deacon.fastq.gz,./inputdata/sample1.contigs_final.fasta
+sample2,./inputdata/sample2.deacon_1.fastq.gz,./inputdata/sample2.deacon_2.fastq.gz,./inputdata/2sample2.deacon.fastq.gz,./inputdata/sample2.contigs_final.fasta
 
 ```
 
