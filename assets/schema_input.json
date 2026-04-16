@@ -1,0 +1,57 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://raw.githubusercontent.com/xiaoli-dong/taxflow/main/assets/schema_input.json",
+    "title": "xiaoli-dong/taxflow pipeline - params.input schema",
+    "description": "Schema for the file provided with params.input",
+    "type": "array",
+
+    "items": {
+        "type": "object",
+
+        "properties": {
+
+            "sample": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "Sample name must be provided and cannot contain spaces",
+                "meta": ["id"]
+            },
+
+            "fastq_1": {
+                "type": "string",
+                "pattern": "^(NA|([\\S\\s]*\\/)?[^\\s\\/]+\\.(fastq|fq)(\\.gz)?)$",
+                "errorMessage": "Field must be 'NA' or a valid FastQ file (.fq, .fastq, .gz)."
+            },
+
+            "fastq_2": {
+                "type": "string",
+                "pattern": "^(NA|([\\S\\s]*\\/)?[^\\s\\/]+\\.(fastq|fq)(\\.gz)?)$",
+                "errorMessage": "Field must be 'NA' or a valid FastQ file (.fq, .fastq, .gz)."
+            },
+
+            "long_fastq": {
+                "type": "string",
+                "pattern": "^(NA|([\\S\\s]*\\/)?[^\\s\\/]+\\.(fastq|fq)(\\.gz)?)$",
+                "errorMessage": "Field must be 'NA' or a valid FastQ file (.fq, .fastq, .gz)."
+            },
+
+            "fasta_contig": {
+                "type": "string",
+                "pattern": "^(NA|([\\S\\s]*\\/)?[^\\s\\/]+\\.(fasta|fna|fa)(\\.gz)?)$",
+                "errorMessage": "Field must be 'NA' or a valid Assembly file (.fa, .fna, .fasta, .gz)."
+            }
+        },
+
+        "required": ["sample"],
+
+        "anyOf": [
+            { "required": ["fastq_1"] },
+             { "required": ["long_fastq"] },
+            { "required": ["fasta_contig"] }
+        ],
+
+        "errorMessage": {
+            "anyOf": "Each sample requires at least one of: fastq_1 (short reads) or fasta_contig (assembly)."
+        }
+    }
+}
