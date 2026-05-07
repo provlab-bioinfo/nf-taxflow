@@ -5,8 +5,8 @@ process SYLPHTAX_TAXPROF {
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/sylph-tax:1.7.0--pyhdfd78af_0':
-        'biocontainers/sylph-tax:1.7.0--pyhdfd78af_0' }"
+        'https://depot.galaxyproject.org/singularity/sylph-tax:1.9.0--pyhdfd78af_0':
+        'biocontainers/sylph-tax:1.9.0--pyhdfd78af_0' }"
 
     input:
     tuple val(meta), path(sylph_results), path(db_paths)
@@ -15,6 +15,7 @@ process SYLPHTAX_TAXPROF {
 
     output:
     tuple val(meta), path("*.sylphmpa"), emit: taxprof_output
+    tuple val(meta), path("*.filtered.sylphmpa"), emit: taxprof_filtered_output
     path "versions.yml"                , emit: versions
 
     when:
@@ -35,6 +36,17 @@ process SYLPHTAX_TAXPROF {
         ${taxons}
 
     mv *.sylphmpa ${prefix}.sylphmpa
+
+
+    echo -e "sample\tclade_name\trelative_abundance\tsequence_abundance\tANI\tCoverage" > "${prefix}.filtered.sylphmpa"
+    awk -v s="${meta.id}" '
+    BEGIN {FS=OFS="\t"}
+    NR==1 {next}
+    \$1 ~ /t__/ {
+        print s, \$1, \$2, \$3, \$4, \$5
+    }
+    ' ${prefix}.sylphmpa >> "${prefix}.filtered.sylphmpa"
+
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

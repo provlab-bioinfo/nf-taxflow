@@ -43,45 +43,7 @@
                 }
             }
         },
-        "reference_genome_options": {
-            "title": "Reference genome options",
-            "type": "object",
-            "fa_icon": "fas fa-dna",
-            "description": "Reference genome related files and options required for the workflow.",
-            "properties": {
-                "genome": {
-                    "type": "string",
-                    "description": "Name of iGenomes reference.",
-                    "fa_icon": "fas fa-book",
-                    "help_text": "If using a reference genome configured in the pipeline using iGenomes, use this parameter to give the ID for the reference. This is then used to build the full paths for all required reference genome files e.g. `--genome GRCh38`. \n\nSee the [nf-core website docs](https://nf-co.re/usage/reference_genomes) for more details."
-                },
-                "fasta": {
-                    "type": "string",
-                    "format": "file-path",
-                    "exists": true,
-                    "mimetype": "text/plain",
-                    "pattern": "^\\S+\\.fn?a(sta)?(\\.gz)?$",
-                    "description": "Path to FASTA genome file.",
-                    "help_text": "This parameter is *mandatory* if `--genome` is not specified. If you don't have a BWA index available this will be generated for you automatically. Combine with `--save_reference` to save BWA index for future runs.",
-                    "fa_icon": "far fa-file-code"
-                },
-                "igenomes_ignore": {
-                    "type": "boolean",
-                    "description": "Do not load the iGenomes reference config.",
-                    "fa_icon": "fas fa-ban",
-                    "hidden": true,
-                    "help_text": "Do not load `igenomes.config` when running the pipeline. You may choose this option if you observe clashes between custom parameters and those supplied in `igenomes.config`."
-                },
-                "igenomes_base": {
-                    "type": "string",
-                    "format": "directory-path",
-                    "description": "The base path to the igenomes reference files",
-                    "fa_icon": "fas fa-ban",
-                    "hidden": true,
-                    "default": "s3://ngi-igenomes/igenomes/"
-                }
-            }
-        },
+
         "institutional_config_options": {
             "title": "Institutional config options",
             "type": "object",
@@ -276,10 +238,11 @@
                 "format": "file"
             },
             "default": {
-                "gtdb": "/nfs/APL_Genomics/db/prod/sylph/gtdb-r226-c200-dbv1.syldb",
+                "gtdb": "/nfs/APL_Genomics/db/prod/sylph/gtdb-r232-c200-dbv1.syldb",
+                "globdb": "/nfs/APL_Genomics/db/prod/sylph/globdb_r226_sylph_c200.syldb",
                 "imgvr": "/nfs/APL_Genomics/db/prod/sylph/imgvr_c200_v0.3.0.syldb",
                 "uhgv": "/nfs/APL_Genomics/db/prod/sylph/uhgv_c200_dbv1.syldb",
-                "fungi": "/nfs/APL_Genomics/db/prod/sylph/fungi-refseq-2024-07-25-c200-v0.3.syldb"
+                "fungi": "/nfs/APL_Genomics/db/prod/sylph/fungi-refseq-2025-10-11-c200-dbv1.syldb"
             }
 
 
@@ -289,7 +252,7 @@
             "items": {
                 "type": "string"
             },
-            "default": "['gtdb_r226', 'IMGVR_4.1', 'fungi_refseq_2024-07-25', 'uhgv_default']"
+            "default": "['gtdb', 'imgvr', 'fungi_refseq', 'uhgv_default']"
         },
         "sylphtax_db_files": {
             "type": "object",
@@ -299,14 +262,14 @@
                 "format": "file"
             },
             "default": {
-                "IMGVR_4.1": "/nfs/APL_Genomics/db/prod/sylph-tax/IMGVR_4.1_metadata.tsv.gz",
-                "gtdb_r226": "/nfs/APL_Genomics/db/prod/sylph-tax/gtdb_r226_metadata.tsv.gz",
-                "tara_SMAGs": "/nfs/APL_Genomics/db/prod/sylph-tax/tara_SMAGs_metadata.tsv.gz",
-                "fungi_refseq_2024-07-25": "/nfs/APL_Genomics/db/prod/sylph-tax/fungi_refseq_2024-07-25_metadata.tsv.gz",
+                "fungi_refseq": "/nfs/APL_Genomics/db/prod/sylph-tax/fungi_refseq_2025-10-11_metadata.tsv.gz",
+                "globdb": "/nfs/APL_Genomics/db/prod/sylph-tax/globdb_r226_sylph_tax.tsv.gz",
+                "gtdb": "/nfs/APL_Genomics/db/prod/sylph-tax/gtdb_r232_metadata.tsv.gz",
+                "imgvr": "/nfs/APL_Genomics/db/prod/sylph-tax/IMGVR_4.1_metadata.tsv.gz",
                 "ocean_dna": "/nfs/APL_Genomics/db/prod/sylph-tax/ocean_dna_metadata.tsv.gz",
-                "uhgv_default": "/nfs/APL_Genomics/db/prod/sylph-tax/uhgv_default_metadata.tsv.gz",
-                "globdb_r226": "/nfs/APL_Genomics/db/prod/sylph-tax/globdb_r226_sylph_tax.tsv.gz",
                 "soil_smag": "/nfs/APL_Genomics/db/prod/sylph-tax/soil_smag_metadata.tsv.gz",
+                "tara_SMAGs": "/nfs/APL_Genomics/db/prod/sylph-tax/tara_SMAGs_metadata.tsv.gz",
+                "uhgv_default": "/nfs/APL_Genomics/db/prod/sylph-tax/uhgv_default_metadata.tsv.gz",
                 "uhgv_ictv": "/nfs/APL_Genomics/db/prod/sylph-tax/uhgv_ictv_metadata.tsv.gz"
             }
         },
@@ -314,8 +277,23 @@
             "type": "boolean"
         },
         "singlem_db": {
-            "type": "string",
-            "default": "/nfs/APL_Genomics/db/prod/singlem/S5.4.0.GTDB_r226.metapackage_20250331.smpkg.zb"
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "default": "['globdb']"
+        },
+        "singlem_db_files": {
+            "type": "object",
+            "description": "Map of SingleM database names to metadata file paths",
+            "additionalProperties": {
+                "type": "string",
+                "format": "file"
+            },
+            "default": {
+                "GTDB": "/nfs/APL_Genomics/db/prod/singlem/S5.4.0.GTDB_r226.metapackage_20250331.smpkg.zb",
+                "globdb": "/nfs/APL_Genomics/db/prod/singlem/GlobDB_r226.metapackage_v1.smpkg"
+            }
         },
         "skip_gtdbtk": {
             "type": "boolean"
@@ -327,6 +305,13 @@
         "gtdbtk_mash_db": {
             "type": "string",
             "default": "/nfs/APL_Genomics/db/prod/gtdbtk/release226/mash/gtdbtk.gtdb_ref_sketch.msh"
+        },
+        "skip_rrna": {
+            "type": "boolean"
+        },
+        "gtdbtk_ssu_db": {
+            "type": "string",
+            "default": "/nfs/APL_Genomics/db/prod/ssu_rRNA/GTDB/ssu_all_release226.fna"
         }
     }
 }

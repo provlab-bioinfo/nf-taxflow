@@ -1,4 +1,4 @@
-process SINGLEM_PIPE {
+process SINGLEM_SUMMARISE {
     tag "$meta.id"
     label 'process_medium'
     //database version must match the software version. it is better to redownload the database when the software is updated, to avoid compatibility issues. if the database is not available for the new version
@@ -8,15 +8,17 @@ process SINGLEM_PIPE {
         'biocontainers/singlem%3A0.20.3--pyhdfd78af_2' }"
 
     input:
-    tuple val(meta), path(reads)
-    path(metapackage)
+    tuple val(meta), path(taxonomic_profile)
+
 
     output:
-
-    tuple val(meta), path('*.profile.tsv'), emit: profile
-    tuple val(meta), path('*.profile_filtered.tsv'), emit: profile_filtered
-    tuple val(meta), path('*.taxonomic-profile-krona.html'), emit: taxonomic_profile_krona
-
+    tuple val(meta), path('*-domain.tsv'),  optional:true, emit: domain_profile
+    tuple val(meta), path('*-phylum.tsv'),  optional:true, emit: phylum_profile
+    tuple val(meta), path('*-class.tsv'),  optional:true, emit: class_profile
+    tuple val(meta), path('*-order.tsv'),  optional:true, emit: order_profile
+    tuple val(meta), path('*-family.tsv'),  optional:true, emit: family_profile
+    tuple val(meta), path('*-genus.tsv'),  optional:true, emit: genus_profile
+    tuple val(meta), path('*-species.tsv'),  optional:true, emit: species_profile
     path "versions.yml"           , emit: versions
 
 
@@ -24,29 +26,13 @@ process SINGLEM_PIPE {
     task.ext.when == null || task.ext.when
 
     script:
-    //def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
-    def input = meta.single_end ? "-1 ${reads}" : "-1 ${reads[0]} -2 ${reads[1]}"
+
 
     """
-
-    singlem pipe \\
-        ${input} \\
-        -p ${prefix}.profile.tsv \\
-        --taxonomic-profile-krona ${prefix}.taxonomic-profile-krona.html \\
-        --threads  $task.cpus \\
-        --metapackage ${metapackage}
-
-
-    echo -e "sample\tcoverage\ttaxonomy" > "${prefix}.profile_filtered.tsv"
-    awk -v s="${meta.id}" '
-    BEGIN {FS=OFS="\t"}
-    NR==1 {next}
-    \$3 ~ /s__/ {
-        print s, \$2, \$3
-    }
-    ' ${prefix}.profile.tsv >> "${prefix}.profile_filtered.tsv"
-
+    singlem summarise \\
+        --input-taxonomic-profile ${taxonomic_profile} \\
+        --output-species-by-site-relative-abundance-prefix ${prefix}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -59,8 +45,13 @@ process SINGLEM_PIPE {
 
 
     """
-    touch ${prefix}.taxonomic-profile.tsv
-    touch ${prefix}.taxonomic-profile-krona.html
+    touch ${prefix}-domain.tsv
+    touch ${prefix}-phylum.tsv
+    touch ${prefix}-class.tsv
+    touch ${prefix}-order.tsv
+    touch ${prefix}-family.tsv
+    touch ${prefix}-genus.tsv
+    touch ${prefix}-species.tsv
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

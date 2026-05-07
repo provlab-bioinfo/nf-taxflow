@@ -4,8 +4,8 @@ process KRAKEN2_KRAKEN2 {
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/kraken2:2.1.6--pl5321h077b44d_0' :
-        'biocontainers/kraken2:2.1.6--pl5321h077b44d_0' }"
+        'https://depot.galaxyproject.org/singularity/kraken2%3A2.17.1--pl5321h077b44d_0' :
+        'biocontainers/kraken2%3A2.17.1--pl5321h077b44d_0' }"
 
     input:
     tuple val(meta), path(reads)

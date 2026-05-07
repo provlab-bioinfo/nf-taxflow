@@ -7,8 +7,16 @@ include { KRAKEN2_KRAKEN2 } from '../../modules/local/kraken2/kraken2/main'
 include { SYLPH_PROFILE } from '../../modules/local/sylph/profile/main'
 include { SYLPHTAX_TAXPROF } from '../../modules/local/sylphtax/taxprof/main'
 include { SINGLEM_PIPE } from '../../modules/local/singlem/pipe/main'
+include { SINGLEM_SUMMARISE } from '../../modules/local/singlem/summarise/main'
 include { BRACKEN_BRACKEN } from '../../modules/local/bracken/bracken/main'
 include { BRACKEN_COMBINEBRACKENOUTPUTS } from '../../modules/local/bracken/combinebrackenoutputs/main'
+include { BRACKEN_GETTOPMATCHES } from '../../modules/local/bracken/gettopmatches/main'
+include {
+    CSVTK_CONCAT as CSVTK_CONCAT_TAXPROF ;
+    CSVTK_CONCAT as CSVTK_CONCAT_SINGLEM;
+    CSVTK_CONCAT as CSVTK_CONCAT_TOPMATCHES
+} from '../../modules/local/csvtk/concat/main.nf'
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
@@ -42,22 +50,32 @@ def selectDatabaseFiles(db_map, selected_databases) {
 
     return db_paths
 }
+// Note: this workflow is used for the common functionality between classifyreads_short and classifyreads_long,
 
-workflow CLASSIFYREADS {
+workflow CLASSIFYREADS_COMMON {
     take:
     ch_reads // channel: samplesheet read in from --input
 
     main:
 
     ch_versions = channel.empty()
-
+    ch_reads.view { println "Input ch_reads channel in CLASSIFYREADS: ${it}" }
     //classify
+     //classify
     if (!params.skip_kraken2) {
         KRAKEN2_KRAKEN2(ch_reads, params.kraken2_db, false, true)
         ch_versions = ch_versions.mix(KRAKEN2_KRAKEN2.out.versions)
 
         BRACKEN_BRACKEN(KRAKEN2_KRAKEN2.out.report, params.kraken2_db)
+        BRACKEN_GETTOPMATCHES(BRACKEN_BRACKEN.out.reports)
+        CSVTK_CONCAT_TOPMATCHES(
+            BRACKEN_GETTOPMATCHES.out.csv.map { meta, csv -> csv }.collect().map { csvs ->
+                tuple([id: "reads_${params.datatype}_kraken2_bracken.topmatches"], csvs)
+            },
 
+            'csv',
+            'csv'
+        )
         //custom column names for bracken report
         // Step 1: Convert reports to [sample_id, path] pairs
         ch_bracken_pairs = BRACKEN_BRACKEN.out.reports.map { item -> [item[0]['id'], item[1]] }
@@ -66,14 +84,18 @@ workflow CLASSIFYREADS {
         // Step 2: Collect all pairs into a single list
         ch_bracken_pairs_list = ch_bracken_pairs.toList().view()
 
-        ch_to_combine_bracken_report = ch_bracken_pairs_list.map { items ->
-            def reports = items.collect { it[1] }
-            // file paths
-            def names = items.collect { it[0] }.join(',')
-            // sample IDs
-            tuple([id: "bracken_report"], reports, names)
-        }
-        ch_to_combine_bracken_report.view()
+        ch_to_combine_bracken_report = ch_bracken_pairs_list
+            .filter { items -> items != null && items.size() > 0 }
+            .map { items ->
+                def reports = items.collect { it[1] }
+                // file paths
+                def names = items.collect { it[0] }.join(',')
+                log.info "Combining ${items.size()} bracken reports for samples: ${names}"
+                // sample IDs
+                tuple([id: "bracken_report"], reports, names)
+            }
+        //ch_to_combine_bracken_report.view()
+        // Only call workflow if channel has data (using ifEmpty with dummy)
 
         BRACKEN_COMBINEBRACKENOUTPUTS(ch_to_combine_bracken_report)
         ch_versions = ch_versions.mix(BRACKEN_COMBINEBRACKENOUTPUTS.out.versions)
@@ -113,6 +135,15 @@ workflow CLASSIFYREADS {
         SYLPHTAX_TAXPROF(ch_sylphtax_inputs)
         ch_versions = ch_versions.mix(SYLPHTAX_TAXPROF.out.versions)
 
+        CSVTK_CONCAT_TAXPROF(
+            SYLPHTAX_TAXPROF.out.taxprof_filtered_output.map { meta, csv -> csv }.collect().map { csvs ->
+                tuple([id: "reads_${params.datatype}.sylph-tax_taxprof.filtered"], csvs)
+            },
+
+            'tsv',
+            'tsv'
+        )
+
     }
     /*
     SingleM is a software suite which takes short read metagenomic data as input,
@@ -130,9 +161,24 @@ workflow CLASSIFYREADS {
 
 
     if (!params.skip_singlem) {
-        SINGLEM_PIPE(ch_reads, params.singlem_db)
+        // Load DB map from params
+        // Get database file paths using the function
+        def db_paths = selectDatabaseFiles(params.singlem_db_files, params.singlem_db)
+
+        SINGLEM_PIPE(ch_reads, db_paths)
         ch_versions = ch_versions.mix(SINGLEM_PIPE.out.versions)
 
+        SINGLEM_SUMMARISE(SINGLEM_PIPE.out.profile)
+        ch_versions = ch_versions.mix(SINGLEM_SUMMARISE.out.versions)
+
+        CSVTK_CONCAT_SINGLEM (
+            SINGLEM_PIPE.out.profile_filtered.map { meta, csv -> csv }.collect().map { csvs ->
+                tuple([id: "reads_${params.datatype}.singlem_profile_filtered"], csvs)
+            },
+
+            'tsv',
+            'tsv'
+        )
     }
 
     emit:

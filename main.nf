@@ -24,21 +24,15 @@ include { getGenomeAttribute } from './subworkflows/local/utils_nfcore_taxflow_p
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-// TODO nf-core: Remove this line if you don't need a FASTA file
-//   This is an example of how to use getGenomeAttribute() to fetch parameters
-//   from igenomes.config using `--genome`
-params.fasta = getGenomeAttribute('fasta')
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     NAMED WORKFLOW FOR PIPELINE
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-//include { PATHOGENSEQ } from './workflows/pathogenseq'
-//if (params.datatype == 'reads') {
-include { CLASSIFYREADS_LONG } from './workflows/classifyreads_long'
-include { CLASSIFYREADS_SHORT } from './workflows/classifyreads_short'
 include { CLASSIFYGENOMES } from './workflows/classifygenomes'
+include { CLASSIFYREADS_SHORT } from './workflows/classifyreads_short' // for short reads
+include { CLASSIFYREADS_LONG } from './workflows/classifyreads_long' // for long reads, we can use the same workflow as for contigs/genomes, since the classification is the same (just different input format)
 //}
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -49,36 +43,79 @@ include { CLASSIFYGENOMES } from './workflows/classifygenomes'
 //
 // WORKFLOW: Run main analysis pipeline depending on type of input
 //
+
 workflow ABRPOVLAB_TAXFLOW {
+
     take:
-    short_reads
-    long_reads
-    fasta_contig
+    ch_samplesheet
 
     main:
 
-    //
-    // WORKFLOW: Run pipeline
-    //
+    //ch_samplesheet.view { println "Input samplesheet channel: ${it}" }
 
-    if (params.datatype == 'short'){
-        CLASSIFYREADS_SHORT(short_reads)
+
+    //ch_samplesheet.view ()
+    /*
+     * SHORT READS
+     */
+    ch_short = ch_samplesheet
+        .filter { meta, pe, lfq, contig -> pe != null }
+        .map { meta, pe, lfq, contig ->
+            tuple(meta, pe)
+        }
+
+    /*
+     * LONG READS
+     */
+    ch_long = ch_samplesheet
+        .filter { meta, pe, lfq, contig -> lfq != null }
+        .map { meta, pe, lfq, contig ->
+            tuple(
+                [ id: meta.id, single_end: true ],
+                lfq
+            )
+        }
+
+    /*
+     * CONTIGS
+     */
+    ch_contig = ch_samplesheet
+        .filter { meta, pe, lfq, contig -> contig != null }
+        .map { meta, pe, lfq, contig ->
+            tuple(meta, contig)
+        }
+
+    /*
+     * EXECUTION SAFETY FLAGS
+     */
+
+    /*
+     * SHORT (always safe if enabled)
+     */
+    if (params.datatype in ['short', 'all']) {
+        CLASSIFYREADS_SHORT(ch_short)
+    }
+
+    /*
+     * LONG (SAFE GUARD)
+     */
+
+
+    if (params.datatype in ['long', 'all']) {
+
+        CLASSIFYREADS_LONG(ch_long)
 
     }
-    else if (params.datatype == 'long') {
-        CLASSIFYREADS_LONG(long_reads)
 
-    }
-    else if (params.datatype == 'contig') {
-       CLASSIFYGENOMES(fasta_contig)
-    }
-    else if( params.datatype == 'all'){
-        CLASSIFYREADS_SHORT(short_reads)
-        CLASSIFYREADS_LONG(long_reads)
-        CLASSIFYGENOMES(fasta_contig)
-    }
+    /*
+     * CONTIG (SAFE GUARD)
+     */
+    if (params.datatype in ['contig', 'all']) {
 
+         CLASSIFYGENOMES(ch_contig)
+    }
 }
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
@@ -101,11 +138,17 @@ workflow {
     //
     // WORKFLOW: Run main workflow
     //
-    ABRPOVLAB_TAXFLOW(
-        PIPELINE_INITIALISATION.out.short_reads,
-        PIPELINE_INITIALISATION.out.long_reads,
-        PIPELINE_INITIALISATION.out.fasta_contig,
+     ABRPOVLAB_TAXFLOW(
+        // PIPELINE_INITIALISATION.out.short_reads,
+        // PIPELINE_INITIALISATION.out.long_reads,
+        // PIPELINE_INITIALISATION.out.fasta_contig,
+        PIPELINE_INITIALISATION.out.ch_samplesheet
     )
+
+    /* ABRPOVLAB_TAXFLOW(
+        PIPELINE_INITIALISATION.out.ch_samplesheet
+
+    ) */
     //
     // SUBWORKFLOW: Run completion tasks
     //

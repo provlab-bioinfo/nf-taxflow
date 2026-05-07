@@ -26,12 +26,7 @@ process SYLPH_PROFILE {
     def db_flags = db_paths.collect { "${it}" }.join(' ')
 
     """
-    sylph profile \\
-        -t $task.cpus \\
-        $args \\
-        ${db_flags}  \\
-        $input \\
-        -o ${prefix}.tsv
+    sylph profile -t $task.cpus $args ${db_flags}  $input -o ${prefix}.tsv
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

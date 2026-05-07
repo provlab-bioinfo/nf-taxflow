@@ -4,8 +4,8 @@ process BARRNAP {
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/barrnap:0.9--hdfd78af_4' :
-        'biocontainers/barrnap:0.9--hdfd78af_4' }"
+        'https://depot.galaxyproject.org/singularity/barrnap%3A1.10.6--pl5321hdfd78af_0' :
+        'biocontainers/barrnap%3A1.10.6--pl5321hdfd78af_0' }"
 
     input:
     tuple val(meta), path(contigs)
@@ -36,7 +36,7 @@ process BARRNAP {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        \$(barrnap --version)
+        barrnap: \$(barrnap --version 2>&1 | cut -d ' ' -f 2)
     END_VERSIONS
     """
 
