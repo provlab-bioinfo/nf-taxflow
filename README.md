@@ -8,6 +8,39 @@
 ## Pipeline Summary
 The pipeline takes a samplesheet and corresponding quality controlled FASTQ/FASTA files as input. It classified sequence reads with kraken2/bracken, sylph/sylphtax, and singleM. It can also classify assembled contigs with "gtdbtk ani_rep" 
 
+
+```mermaid
+flowchart TD
+    A[("Input: Quality-controlled<br/>FASTQ/FASTA reads")] --> B{--datatype<br/>short / long / contig / all}
+    
+    B -->|short/long reads| C[Read processing]
+    B -->|contigs only| D[Contig processing]
+    B -->|all| C & D
+    
+    subgraph TAXONOMY_READS [Taxonomic Classification - Reads]
+        C --> KRAKEN[Kraken2 / Bracken]
+        C --> SYLPH[Sylph / Sylph-tax]
+        C --> SINGLEM[singleM]
+    end
+    
+    subgraph CONTIG_ANALYSIS [Contig Analysis]
+        D --> GTDB[GTDB-Tk<br/>ANI representation]
+        D --> BARRNAP[barrnap<br/>16S rRNA prediction on contigs]
+    end
+    
+    KRAKEN --> MERGE[Merge results]
+    SYLPH --> MERGE
+    SINGLEM --> MERGE
+    GTDB --> MERGE
+    BARRNAP --> RNA_OUT[16S rRNA feature tables]
+    
+    MERGE --> FINAL[("Final Output:<br/>Taxonomic profiles")]    
+    RNA_OUT --> FINAL
+    
+    FINAL --> OUT[📁 --outdir]
+```
+
+
 ## Pipeline required reference sequences and databases
 1. [Kraken 2 / Bracken Database](https://benlangmead.github.io/aws-indexes/k2)
 2. [Sylph Database](https://sylph-docs.github.io/pre%E2%80%90built-databases/)
