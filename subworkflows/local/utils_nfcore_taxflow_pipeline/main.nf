@@ -102,17 +102,7 @@ workflow PIPELINE_INITIALISATION {
         new_meta.single_end = is_single
        // return tuple(new_meta, pe, lfq, contig)
 
-       // 🔍 DEBUG HERE
-       /*  println """
-        [DEBUG BEFORE RETURN]
-        id          : ${new_meta.id}
-        single_end  : ${new_meta.single_end}
-        pe          : ${pe}
-        pe_size     : ${pe?.size()}
-        long_reads  : ${lfq}
-        contig      : ${contig}
-        ------------------------
-        """.stripIndent() */
+
 
         return [new_meta, pe, lfq, contig]
 

@@ -9,7 +9,7 @@ include { SYLPHTAX_TAXPROF } from '../../modules/local/sylphtax/taxprof/main'
 include { SINGLEM_PIPE } from '../../modules/local/singlem/pipe/main'
 include { SINGLEM_SUMMARISE } from '../../modules/local/singlem/summarise/main'
 include { BRACKEN_BRACKEN } from '../../modules/local/bracken/bracken/main'
-include { BRACKEN_COMBINEBRACKENOUTPUTS } from '../../modules/local/bracken/combinebrackenoutputs/main'
+//include { BRACKEN_COMBINEBRACKENOUTPUTS } from '../../modules/local/bracken/combinebrackenoutputs/main'
 include { BRACKEN_GETTOPMATCHES } from '../../modules/local/bracken/gettopmatches/main'
 include {
     CSVTK_CONCAT as CSVTK_CONCAT_TAXPROF ;
@@ -76,29 +76,8 @@ workflow CLASSIFYREADS_COMMON {
             'csv',
             'csv'
         )
-        //custom column names for bracken report
-        // Step 1: Convert reports to [sample_id, path] pairs
-        ch_bracken_pairs = BRACKEN_BRACKEN.out.reports.map { item -> [item[0]['id'], item[1]] }
-        // keep as 2-element list
-
-        // Step 2: Collect all pairs into a single list
-        ch_bracken_pairs_list = ch_bracken_pairs.toList().view()
-
-        ch_to_combine_bracken_report = ch_bracken_pairs_list
-            .filter { items -> items != null && items.size() > 0 }
-            .map { items ->
-                def reports = items.collect { it[1] }
-                // file paths
-                def names = items.collect { it[0] }.join(',')
-                log.info "Combining ${items.size()} bracken reports for samples: ${names}"
-                // sample IDs
-                tuple([id: "bracken_report"], reports, names)
-            }
-        //ch_to_combine_bracken_report.view()
-        // Only call workflow if channel has data (using ifEmpty with dummy)
-
-        BRACKEN_COMBINEBRACKENOUTPUTS(ch_to_combine_bracken_report)
-        ch_versions = ch_versions.mix(BRACKEN_COMBINEBRACKENOUTPUTS.out.versions)
+       ch_versions = ch_versions.mix(BRACKEN_BRACKEN.out.versions)
+        ch_versions = ch_versions.mix(BRACKEN_GETTOPMATCHES.out.versions)
     }
     /*
     sylph, a species-level metagenome profiler that estimates genome-to-metagenome containment

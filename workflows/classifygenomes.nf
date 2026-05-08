@@ -22,11 +22,13 @@ include { BLAST_BLASTN } from '../modules/nf-core/blast/blastn/main'
 
 workflow CLASSIFYGENOMES {
     take:
-    fasta_contigs // channel: samplesheet read in from --input
+    ch_contigs // channel: samplesheet read in from --input
 
     main:
 
     ch_versions = channel.empty()
+    ch_contigs.view { println "Input samplesheet channel for CLASSIFYGENOMES: ${it}" }
+    ch_contigs.filter {meta, reads -> reads.size() > 0 && reads.countFasta() > 0}.set { fasta_contigs }
 
     if (!params.skip_gtdbtk) {
         //To run GTDB-Tk ANI REP once on ALL genomes together

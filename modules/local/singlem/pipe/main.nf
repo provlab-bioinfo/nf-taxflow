@@ -15,7 +15,8 @@ process SINGLEM_PIPE {
 
     tuple val(meta), path('*.profile.tsv'), emit: profile
     tuple val(meta), path('*.profile_filtered.tsv'), emit: profile_filtered
-    tuple val(meta), path('*.taxonomic-profile-krona.html'), emit: taxonomic_profile_krona
+    tuple val(meta), path('*.taxonomic-profile-krona.html'),  optional:true, emit: taxonomic_profile_krona
+    tuple val(meta), path('*.otu-table.tsv'), optional:true, emit: otu_table
 
     path "versions.yml"           , emit: versions
 
@@ -34,6 +35,7 @@ process SINGLEM_PIPE {
         ${input} \\
         -p ${prefix}.profile.tsv \\
         --taxonomic-profile-krona ${prefix}.taxonomic-profile-krona.html \\
+        --otu-table ${prefix}.otu-table.tsv \\
         --threads  $task.cpus \\
         --metapackage ${metapackage}
 
