@@ -1,4 +1,4 @@
-process BRACKEN_GETTOPMATCHES {
+process SPLITFASTABYGFF {
     label 'process_single'
 
     conda "conda-forge::python=3.9.1"
@@ -6,10 +6,13 @@ process BRACKEN_GETTOPMATCHES {
         'https://depot.galaxyproject.org/singularity/python:3.9--1' :
         'biocontainers/python:3.9--1' }"
     input:
-    tuple val(meta), path(default_bracken_output)
+    tuple val(meta), path(fasta), path(gff)
 
     output:
-    tuple val(meta), path("*.csv"), emit: csv
+
+    tuple val(meta), path("*5S_rRNA.fa"),  optional:true, emit: rrna_5S
+    tuple val(meta), path("*16S_rRNA.fa"), optional: true, emit: rrna_16S
+    tuple val(meta), path("*23S_rRNA.fa"), optional: true, emit: rrna_23S
     path "versions.yml", emit: versions
 
     when:
@@ -20,7 +23,8 @@ process BRACKEN_GETTOPMATCHES {
     prefix = task.ext.prefix ?: "${meta.id}"
     def VERSION = '1.2' // WARN: Version information not provided by tool on CLI. Please update this string when bumping container versions.
     """
-    extract_top_bracken_csv.py ${default_bracken_output} ${meta.id} > ${prefix}.bracken.csv
+
+    split_fasta_by_gff.py ${gff} ${fasta} ./ ${prefix}
 
     cat <<-END_VERSIONS > versions.yml
      "${task.process}":

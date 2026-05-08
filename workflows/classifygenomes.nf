@@ -10,7 +10,8 @@ include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pi
 include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_taxflow_pipeline'
 include { GTDBTK_ANIREP } from '../modules/local/gtdbtk/anirep/main'
 include { BARRNAP } from '../modules/local/barrnap/main'
-include { SEQKIT_GREP as SEQKIT_GREP_16s } from '../modules/local/seqkit/grep/main'
+include { SPLITFASTABYGFF } from '../modules/local/splitfastabygff/main'
+
 include { BLAST_BLASTN } from '../modules/nf-core/blast/blastn/main'
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -51,18 +52,20 @@ workflow CLASSIFYGENOMES {
         )
         ch_versions = ch_versions.mix(BARRNAP.out.versions)
 
-        SEQKIT_GREP_16s(
-            BARRNAP.out.fasta
-        )
 
+            SPLITFASTABYGFF(
+                BARRNAP.out.fasta.join(BARRNAP.out.gff)
+
+            )
+        SPLITFASTABYGFF.out.rrna_16S.filter { meta, fasta -> fasta.size() > 0 && fasta.countFasta() > 0 }.set { ch_16S_fasta }
         BLAST_BLASTN(
-            SEQKIT_GREP_16s.out.filter,
+            ch_16S_fasta,
             [[id:"blastdb"], params.gtdbtk_ssu_db],
             [],
             [],
             []
         )
-        ch_versions = ch_versions.mix(SEQKIT_GREP_16s.out.versions)
+        ch_versions = ch_versions.mix(SPLITFASTABYGFF.out.versions)
         ch_versions = ch_versions.mix(BLAST_BLASTN.out.versions)
     }
 
