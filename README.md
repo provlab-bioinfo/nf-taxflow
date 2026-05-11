@@ -104,10 +104,4 @@ nextflow run nf-taxflow/main.nf \
 
 >* Notes: Please provide pipeline parameters via the CLI or Nextflow `-params-file` option. Custom config files including those provided by the `-c` Nextflow option can be used to provide any configuration _**except for parameters**_; see [docs](https://nf-co.re/docs/usage/getting_started/configuration#custom-configuration-files).
 
-
-## Credits
-
-xiaoli-dong/taxflow was originally written by xiaoli dong.
-
-
 # nf-taxflow
