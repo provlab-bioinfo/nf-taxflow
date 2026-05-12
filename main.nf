@@ -33,6 +33,7 @@ include { getGenomeAttribute } from './subworkflows/local/utils_nfcore_taxflow_p
 include { CLASSIFYGENOMES } from './workflows/classifygenomes'
 include { CLASSIFYREADS_SHORT } from './workflows/classifyreads_short' // for short reads
 include { CLASSIFYREADS_LONG } from './workflows/classifyreads_long' // for long reads, we can use the same workflow as for contigs/genomes, since the classification is the same (just different input format)
+
 //}
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -94,6 +95,7 @@ workflow ABRPOVLAB_TAXFLOW {
      */
     if (params.datatype in ['short', 'all']) {
         CLASSIFYREADS_SHORT(ch_short)
+
     }
 
     /*

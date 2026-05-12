@@ -56,9 +56,14 @@ workflow CLASSIFYREADS_COMMON {
     take:
     ch_reads // channel: samplesheet read in from --input
 
+
     main:
 
     ch_versions = channel.empty()
+    bracken_topmatches = channel.empty()
+    sylph_taxprof = channel.empty()
+    singlem_profile_filtered = channel.empty()
+
     ch_reads.view { println "Input ch_reads channel in CLASSIFYREADS: ${it}" }
     //classify
      //classify
@@ -68,15 +73,16 @@ workflow CLASSIFYREADS_COMMON {
 
         BRACKEN_BRACKEN(KRAKEN2_KRAKEN2.out.report, params.kraken2_db)
         BRACKEN_GETTOPMATCHES(BRACKEN_BRACKEN.out.reports)
-        CSVTK_CONCAT_TOPMATCHES(
+        /* CSVTK_CONCAT_TOPMATCHES(
             BRACKEN_GETTOPMATCHES.out.csv.map { meta, csv -> csv }.collect().map { csvs ->
                 tuple([id: "reads_${params.datatype}_kraken2_bracken.topmatches"], csvs)
             },
 
             'csv',
             'csv'
-        )
-       ch_versions = ch_versions.mix(BRACKEN_BRACKEN.out.versions)
+        ) */
+        bracken_topmatches = BRACKEN_GETTOPMATCHES.out.csv
+        ch_versions = ch_versions.mix(BRACKEN_BRACKEN.out.versions)
         ch_versions = ch_versions.mix(BRACKEN_GETTOPMATCHES.out.versions)
     }
     /*
@@ -113,8 +119,8 @@ workflow CLASSIFYREADS_COMMON {
 
         SYLPHTAX_TAXPROF(ch_sylphtax_inputs)
         ch_versions = ch_versions.mix(SYLPHTAX_TAXPROF.out.versions)
-
-        CSVTK_CONCAT_TAXPROF(
+        sylph_taxprof = SYLPHTAX_TAXPROF.out.taxprof_filtered_output
+       /*  CSVTK_CONCAT_TAXPROF(
             SYLPHTAX_TAXPROF.out.taxprof_filtered_output.map { meta, csv -> csv }.collect().map { csvs ->
                 tuple([id: "reads_${params.datatype}.sylph-tax_taxprof.filtered"], csvs)
             },
@@ -122,7 +128,7 @@ workflow CLASSIFYREADS_COMMON {
             'tsv',
             'tsv'
         )
-
+ */
     }
     /*
     SingleM is a software suite which takes short read metagenomic data as input,
@@ -149,17 +155,21 @@ workflow CLASSIFYREADS_COMMON {
 
         SINGLEM_SUMMARISE(SINGLEM_PIPE.out.profile)
         ch_versions = ch_versions.mix(SINGLEM_SUMMARISE.out.versions)
-
-        CSVTK_CONCAT_SINGLEM (
+        singlem_profile_filtered = SINGLEM_PIPE.out.profile_filtered
+        /* CSVTK_CONCAT_SINGLEM (
             SINGLEM_PIPE.out.profile_filtered.map { meta, csv -> csv }.collect().map { csvs ->
                 tuple([id: "reads_${params.datatype}.singlem_profile_filtered"], csvs)
             },
 
             'tsv',
             'tsv'
-        )
+        ) */
     }
 
     emit:
+    bracken_topmatches
+    sylph_taxprof
+    singlem_profile_filtered
     versions = ch_versions // channel: [ path(versions.yml) ]
+
 }

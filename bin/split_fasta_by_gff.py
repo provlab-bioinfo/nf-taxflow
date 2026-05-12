@@ -8,6 +8,7 @@ def parse_gff(gff_file):
     """
     Parse GFF file and extract rRNA features.
     Returns dictionary: {rna_type: [(contig, start, end, strand), ...]}
+    where rna_type is extracted from Name= attribute (e.g., 5S_rRNA, 16S_rRNA, 23S_rRNA)
     """
     features = defaultdict(list)
 
@@ -30,10 +31,10 @@ def parse_gff(gff_file):
             phase = fields[7]
             attributes = fields[8]
 
-            # Extract Name from attributes
+            # Extract Name from attributes (e.g., Name=5S_rRNA)
             name_match = re.search(r'Name=([^;]+)', attributes)
             if name_match:
-                rna_name = name_match.group(1)  # 5S_rRNA, 16S_rRNA, 23S_rRNA
+                rna_name = name_match.group(1)  # This will be: 5S_rRNA, 16S_rRNA, 23S_rRNA
                 features[rna_name].append((seqid, start, end, strand))
 
     return features
@@ -42,7 +43,7 @@ def parse_fasta_headers(fasta_file):
     """
     Parse FASTA file and extract sequence information.
     FASTA header format: >contig00002:212016-212132(-)
-    Note: Coordinates in FASTA are 0-based, end is exclusive?
+    Note: Coordinates in FASTA are 0-based, end is exclusive
     Returns dictionary: {(contig, start, end, strand): sequence}
     """
     sequences = {}
@@ -61,7 +62,7 @@ def parse_fasta_headers(fasta_file):
                 if header_match:
                     contig = header_match.group(1)
                     start_0based = int(header_match.group(2))  # 0-based start
-                    end_0based = int(header_match.group(3))    # 0-based end (exclusive?)
+                    end_0based = int(header_match.group(3))    # 0-based end (exclusive)
                     strand = header_match.group(4)
 
                     # Store with 0-based coordinates as in FASTA
@@ -118,43 +119,48 @@ def extract_sequence(sequence, start_1based, end_1based, strand, fasta_start_0ba
 def write_fasta(output_file, sequences):
     """
     Write sequences to FASTA file.
-    sequences: list of (header, sequence) tuples
+    sequences: list of (seq_id, description, sequence) tuples
     """
     with open(output_file, 'w') as f:
-        for header, seq in sequences:
-            f.write(f">{header}\n")
+        for seq_id, description, seq in sequences:
+            # Write header with seq_id and description
+            f.write(f">{seq_id} {description}\n")
+
             # Write sequence in lines of 60 characters
             for i in range(0, len(seq), 60):
                 f.write(f"{seq[i:i+60]}\n")
 
 def split_fasta_by_gff(gff_file, fasta_file, output_dir=".", prefix=""):
     """
-    Split FASTA file based on annotations in GFF file.
+    Split FASTA file based on Name attribute in GFF file.
     """
-    # Parse GFF file
+    # Parse GFF file (extracts by Name= attribute)
     print(f"Parsing GFF file: {gff_file}")
     features = parse_gff(gff_file)
 
+    print(f"Found RNA types: {', '.join(features.keys())}")
+
     # Parse FASTA file
-    print(f"Reading FASTA file: {fasta_file}")
+    print(f"\nReading FASTA file: {fasta_file}")
     sequences = parse_fasta_headers(fasta_file)
     print(f"Loaded {len(sequences)} sequences from FASTA")
 
-    # Group sequences by rRNA type
+    # Group sequences by rRNA type (based on Name from GFF)
     rna_sequences = defaultdict(list)
+    # Counters for incremental numbering
+    counters = defaultdict(int)
 
-    # For each rRNA type, find matching sequences
+    # Process each RNA type found in GFF
     for rna_type, regions in features.items():
-        print(f"Processing {rna_type}: {len(regions)} regions")
+        print(f"\nProcessing {rna_type}: {len(regions)} regions")
 
         for contig, start_1based, end_1based, strand in regions:
             # Look for matching sequence in FASTA
             found = False
             for (fasta_contig, fasta_start_0based, fasta_end_0based, fasta_strand), sequence in sequences.items():
-                # Check if this is the same contig and region overlaps
+                # Check if this is the same contig
                 if fasta_contig == contig:
                     # Check if GFF coordinates fall within FASTA region
-                    # FASTA coordinates are 0-based, GFF is 1-based
                     if (fasta_start_0based <= (start_1based - 1) and
                         fasta_end_0based >= end_1based):
 
@@ -163,23 +169,31 @@ def split_fasta_by_gff(gff_file, fasta_file, output_dir=".", prefix=""):
                                                   strand, fasta_start_0based)
 
                         if subseq:
-                            # Create header
-                            header = f"{contig}:{start_1based}-{end_1based}({strand}) {rna_type}"
-                            rna_sequences[rna_type].append((header, subseq))
+                            # Increment counter for this RNA type
+                            counters[rna_type] += 1
+                            # Create seq_id: 5S_rRNA_1, 5S_rRNA_2, etc.
+                            seq_id = f"{prefix}-{rna_type}_{counters[rna_type]}"
+
+                            # Create description from original coordinates
+                            length = end_1based - start_1based + 1
+                            description = f"len={length} {contig}:{start_1based}-{end_1based}({strand})"
+
+                            rna_sequences[rna_type].append((seq_id, description, subseq))
                             found = True
                             break
 
             if not found:
-                print(f"Warning: No sequence found for {contig}:{start_1based}-{end_1based}({strand})")
+                print(f"  Warning: No sequence found for {contig}:{start_1based}-{end_1based}({strand})")
 
-    # Write output files with prefix
+    # Write output files
     print("\nWriting output files:")
     import os
     if output_dir != "." and not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
+    # Write separate files for each RNA type
     for rna_type, seqs in rna_sequences.items():
-        # Sanitize filename
+        # Sanitize filename (remove any problematic characters)
         safe_name = rna_type.replace(' ', '_').replace('/', '_')
 
         # Add prefix if provided
@@ -202,7 +216,7 @@ def split_fasta_by_gff(gff_file, fasta_file, output_dir=".", prefix=""):
         else:
             output_file = os.path.join(output_dir, "all_rrna.fa")
         write_fasta(output_file, all_seqs)
-        print(f"  Wrote {len(all_seqs)} total sequences to {output_file}")
+        print(f"\n  Wrote {len(all_seqs)} total sequences to {output_file}")
 
     return rna_sequences
 
@@ -212,13 +226,16 @@ def main():
         print("\nExample:")
         print("  python3 split_fasta_by_gff.py annotations.gff sequences.fasta ./output sample")
         print("  python3 split_fasta_by_gff.py annotations.gff sequences.fasta ./output")
-        print("\nNote: The script handles coordinate conversion between")
-        print("  GFF (1-based) and FASTA (0-based) coordinates")
+        print("\nThe script extracts the Name= attribute from GFF (e.g., Name=5S_rRNA)")
+        print("and splits sequences based on this attribute.")
         print("\nOutput files with prefix:")
         print("  sample.5S_rRNA.fa")
         print("  sample.16S_rRNA.fa")
         print("  sample.23S_rRNA.fa")
         print("  sample.all_rrna.fa")
+        print("\nFASTA header format example:")
+        print("  >5S_rRNA_1 25PS-157M00046|Contig_1:77141-77256(-)")
+        print("  >16S_rRNA_1 25PS-157M00046|Contig_1:80698-82237(-)")
         sys.exit(1)
 
     gff_file = sys.argv[1]

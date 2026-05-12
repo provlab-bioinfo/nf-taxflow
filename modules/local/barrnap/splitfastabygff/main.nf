@@ -1,4 +1,4 @@
-process SPLITFASTABYGFF {
+process BARRNAP_SPLITFASTABYGFF {
     label 'process_single'
 
     conda "conda-forge::python=3.9.1"
